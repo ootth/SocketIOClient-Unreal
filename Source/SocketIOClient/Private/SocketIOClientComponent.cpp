@@ -130,7 +130,7 @@ void USocketIOClientComponent::SetupCallbacks()
 		URLParams = NativeClient->URLParams;
 	}
 
-	NativeClient->OnConnectedCallback = [this](const FString& InSocketId, const FString& InSessionId)
+	NativeClient->OnConnectedEvent.BindLambda([this](const FString& InSocketId, const FString& InSessionId)
 	{
 		if (NativeClient.IsValid())
 		{
@@ -142,38 +142,38 @@ void USocketIOClientComponent::SetupCallbacks()
 			OnConnected.Broadcast(SocketId, SessionId, bIsReconnection);
 			
 		}
-	};
+	});
 
 	const FSIOCCloseEventSignature OnDisconnectedSafe = OnDisconnected;
 
-	NativeClient->OnDisconnectedCallback = [OnDisconnectedSafe, this](const ESIOConnectionCloseReason Reason)
+	NativeClient->OnDisconnectedEvent.BindLambda([OnDisconnectedSafe, this](const ESIOConnectionCloseReason Reason)
 	{
 		if (NativeClient.IsValid())
 		{
 			bIsConnected = false;
 			OnDisconnectedSafe.Broadcast(Reason);
 		}
-	};
+	});
 
-	NativeClient->OnNamespaceConnectedCallback = [this](const FString& Namespace)
+	NativeClient->OnNamespaceConnectedEvent.BindLambda([this](const FString& Namespace)
 	{
 		if (NativeClient.IsValid())
 		{
 			OnSocketNamespaceConnected.Broadcast(Namespace);
 		}
-	};
+	});
 
 	const FSIOCSocketEventSignature OnSocketNamespaceDisconnectedSafe = OnSocketNamespaceDisconnected;
 
-	NativeClient->OnNamespaceDisconnectedCallback = [this, OnSocketNamespaceDisconnectedSafe](const FString& Namespace)
+	NativeClient->OnNamespaceDisconnectedEvent.BindLambda([this, OnSocketNamespaceDisconnectedSafe](const FString& Namespace)
 	{
 
 		if (NativeClient.IsValid())
 		{
 			OnSocketNamespaceDisconnectedSafe.Broadcast(Namespace);
 		}
-	};
-	NativeClient->OnReconnectionCallback = [this](const uint32 AttemptCount, const uint32 DelayInMs)
+	});
+	NativeClient->OnReconnectionEvent.BindLambda([this](const uint32 AttemptCount, const uint32 DelayInMs)
 	{
 		if (NativeClient.IsValid())
 		{
@@ -194,15 +194,15 @@ void USocketIOClientComponent::SetupCallbacks()
 			}
 			OnConnectionProblems.Broadcast(AttemptCount, DelayInMs, ElapsedInSec);
 		}
-	};
+	});
 
-	NativeClient->OnFailCallback = [this]()
+	NativeClient->OnFailEvent.BindLambda([this]()
 	{
 		if(NativeClient.IsValid())
 		{
 			OnFail.Broadcast();
 		};
-	};
+	});
 }
 
 void USocketIOClientComponent::ClearCallbacks()

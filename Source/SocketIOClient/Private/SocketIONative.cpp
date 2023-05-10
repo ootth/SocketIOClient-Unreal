@@ -109,10 +109,7 @@ void FSocketIONative::Disconnect()
 {	
 	//Ensure disconnected callback is called first because we 
 	//clear all callbacks for stability.
-	if (OnDisconnectedCallback)
-	{
-		OnDisconnectedCallback(ESIOConnectionCloseReason::CLOSE_REASON_NORMAL);
-	}
+	OnDisconnectedEvent.ExecuteIfBound(ESIOConnectionCloseReason::CLOSE_REASON_NORMAL);
 	bIsConnected = false;
 
 	if (bUnbindEventsOnDisconnect)
@@ -133,10 +130,7 @@ void FSocketIONative::SyncDisconnect()
 {
 	//Ensure disconnected callback is called first because we 
 	//clear all callbacks for stability.
-	if (OnDisconnectedCallback)
-	{
-		OnDisconnectedCallback(ESIOConnectionCloseReason::CLOSE_REASON_NORMAL);
-	}
+	OnDisconnectedEvent.ExecuteIfBound(ESIOConnectionCloseReason::CLOSE_REASON_NORMAL);
 	bIsConnected = false;
 
 	if (bUnbindEventsOnDisconnect)
@@ -159,12 +153,12 @@ void FSocketIONative::ClearAllCallbacks()
 	SetupInternalCallbacks();					//if clear socket listeners cleared our internal callbacks. reset them
 	EventFunctionMap.Empty();
 
-	OnConnectedCallback = nullptr;
-	OnDisconnectedCallback = nullptr;
-	OnNamespaceConnectedCallback = nullptr;
-	OnNamespaceDisconnectedCallback = nullptr;
-	OnReconnectionCallback = nullptr;
-	OnFailCallback = nullptr;
+	OnConnectedEvent.Unbind();
+	OnDisconnectedEvent.Unbind();
+	OnNamespaceConnectedEvent.Unbind();
+	OnNamespaceDisconnectedEvent.Unbind();
+	OnReconnectionEvent.Unbind();
+	OnFailEvent.Unbind();
 }
 
 void FSocketIONative::Emit(const FString& EventName, const TSharedPtr<FJsonValue>& Message /*= nullptr*/, TFunction< void(const TArray<TSharedPtr<FJsonValue>>&)> CallbackFunction /*= nullptr*/, const FString& Namespace /*= FString(TEXT("/"))*/)
@@ -424,22 +418,16 @@ void FSocketIONative::SetupInternalCallbacks()
 		LastSessionId = SessionId;
 		SessionId = TEXT("Invalid");
 
-		if (OnDisconnectedCallback)
+		if (bCallbackOnGameThread)
 		{
-			if (bCallbackOnGameThread)
+			FCULambdaRunnable::RunShortLambdaOnGameThread([&, DisconnectReason]
 			{
-				FCULambdaRunnable::RunShortLambdaOnGameThread([&, DisconnectReason]
-				{
-					if (OnDisconnectedCallback)
-					{
-						OnDisconnectedCallback(DisconnectReason);
-					}
-				});
-			}
-			else
-			{
-				OnDisconnectedCallback(DisconnectReason);
-			}
+				OnDisconnectedEvent.ExecuteIfBound(DisconnectReason);
+			});
+		}
+		else
+		{
+			OnDisconnectedEvent.ExecuteIfBound(DisconnectReason);
 		}
 	}));
 
@@ -460,22 +448,16 @@ void FSocketIONative::SetupInternalCallbacks()
 			{
 				UE_LOG(SocketIO, Log, TEXT("SocketIO Connected with session: %s"), *SessionId);
 			}
-			if (OnConnectedCallback)
+			if (bCallbackOnGameThread)
 			{
-				if (bCallbackOnGameThread)
+				FCULambdaRunnable::RunShortLambdaOnGameThread([&]
 				{
-					FCULambdaRunnable::RunShortLambdaOnGameThread([&]
-					{
-						if (OnConnectedCallback)
-						{
-							OnConnectedCallback(SocketId, SessionId);
-						}
-					});
-				}
-				else
-				{
-					OnConnectedCallback(SocketId, SessionId);
-				}
+					OnConnectedEvent.ExecuteIfBound(SocketId, SessionId);
+				});
+			}
+			else
+			{
+				OnConnectedEvent.ExecuteIfBound(SocketId, SessionId);
 			}
 		}
 
@@ -485,22 +467,16 @@ void FSocketIONative::SetupInternalCallbacks()
 		{
 			UE_LOG(SocketIO, Log, TEXT("SocketIO %s connected to namespace: %s"), *SessionId, *Namespace);
 		}
-		if (OnNamespaceConnectedCallback)
+		if (bCallbackOnGameThread)
 		{
-			if (bCallbackOnGameThread)
+			FCULambdaRunnable::RunShortLambdaOnGameThread([&, Namespace]
 			{
-				FCULambdaRunnable::RunShortLambdaOnGameThread([&, Namespace]
-				{
-					if (OnNamespaceConnectedCallback)
-					{
-						OnNamespaceConnectedCallback(Namespace);
-					}
-				});
-			}
-			else
-			{
-				OnNamespaceConnectedCallback(Namespace);
-			}
+				OnNamespaceConnectedEvent.ExecuteIfBound(Namespace);
+			});
+		}
+		else
+		{
+			OnNamespaceConnectedEvent.ExecuteIfBound(Namespace);
 		}
 	}));
 
@@ -516,22 +492,17 @@ void FSocketIONative::SetupInternalCallbacks()
 		{
 			UE_LOG(SocketIO, Log, TEXT("SocketIO %s disconnected from namespace: %s"), *NamespaceSession, *Namespace);
 		}
-		if (OnNamespaceDisconnectedCallback)
+		
+		if (bCallbackOnGameThread)
 		{
-			if (bCallbackOnGameThread)
+			FCULambdaRunnable::RunShortLambdaOnGameThread([&, Namespace]
 			{
-				FCULambdaRunnable::RunShortLambdaOnGameThread([&, Namespace]
-				{
-					if (OnNamespaceDisconnectedCallback)
-					{
-						OnNamespaceDisconnectedCallback(Namespace);
-					}
-				});
-			}
-			else
-			{
-				OnNamespaceDisconnectedCallback(Namespace);
-			}
+				OnNamespaceDisconnectedEvent.ExecuteIfBound(Namespace);
+			});
+		}
+		else
+		{
+			OnNamespaceDisconnectedEvent.ExecuteIfBound(Namespace);
 		}
 	}));
 
@@ -541,22 +512,17 @@ void FSocketIONative::SetupInternalCallbacks()
 		{
 			UE_LOG(SocketIO, Log, TEXT("SocketIO failed to connect."));
 		}
-		if (OnFailCallback)
+		
+		if (bCallbackOnGameThread)
 		{
-			if (bCallbackOnGameThread)
+			FCULambdaRunnable::RunShortLambdaOnGameThread([&]
 			{
-				FCULambdaRunnable::RunShortLambdaOnGameThread([&]
-				{
-					if (OnFailCallback)
-					{
-						OnFailCallback();
-					}
-				});
-			}
-			else
-			{
-				OnFailCallback();
-			}
+				OnFailEvent.ExecuteIfBound();
+			});
+		}
+		else
+		{
+			OnFailEvent.ExecuteIfBound();
 		}
 	}));
 
@@ -568,22 +534,17 @@ void FSocketIONative::SetupInternalCallbacks()
 		{
 			UE_LOG(SocketIO, Log, TEXT("SocketIO %s appears to have lost connection, reconnecting attempt %d with delay %d"), *SessionId, num, delay);
 		}
-		if (OnReconnectionCallback)
+		
+		if (bCallbackOnGameThread)
 		{
-			if (bCallbackOnGameThread)
+			FCULambdaRunnable::RunShortLambdaOnGameThread([&, num, delay]
 			{
-				FCULambdaRunnable::RunShortLambdaOnGameThread([&, num, delay]
-				{
-					if (OnReconnectionCallback)
-					{
-						OnReconnectionCallback(num, delay);
-					}
-				});
-			}
-			else
-			{
-				OnReconnectionCallback(num, delay);
-			}
+				OnReconnectionEvent.ExecuteIfBound(num, delay);
+			});
+		}
+		else
+		{
+			OnReconnectionEvent.ExecuteIfBound(num, delay);
 		}
 	}));
 }
