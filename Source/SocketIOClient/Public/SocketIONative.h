@@ -39,18 +39,18 @@ struct FSIOBoundEvent
 	}
 };
 
+DECLARE_DELEGATE_TwoParams(FOnConnectedEvent, const FString& /*SocketId*/, const FString& /*SessionId*/);
+DECLARE_DELEGATE_OneParam(FOnDisconnectedEvent, const ESIOConnectionCloseReason /*Reason*/);
+DECLARE_DELEGATE_OneParam(FOnNamespaceConnectedEvent, const FString& /*Namespace*/);
+DECLARE_DELEGATE_OneParam(FOnNamespaceDisconnectedEvent, const FString& /*Namespace*/);
+DECLARE_DELEGATE_TwoParams(FOnReconnectionEvent, const uint32 /*AttemptCount*/, const uint32 /*DelayInMs*/);
+DECLARE_DELEGATE(FOnFailEvent);
+
 class SOCKETIOCLIENT_API FSocketIONative
 {
 public:
 	/** By default TLS verification is off. TLS mode will be set by URL on connect.*/
 	FSocketIONative(const bool bForceTLSMode = false, const bool bShouldVerifyTLSCertificate = false);
-
-	DECLARE_DELEGATE_TwoParams(FOnConnectedEvent, const FString& /*SocketId*/, const FString& /*SessionId*/);
-	DECLARE_DELEGATE_OneParam(FOnDisconnectedEvent, const ESIOConnectionCloseReason /*Reason*/);
-	DECLARE_DELEGATE_OneParam(FOnNamespaceConnectedEvent, const FString& /*Namespace*/);
-	DECLARE_DELEGATE_OneParam(FOnNamespaceDisconnectedEvent, const FString& /*Namespace*/);
-	DECLARE_DELEGATE_TwoParams(FOnReconnectionEvent, const uint32 /*AttemptCount*/, const uint32 /*DelayInMs*/);
-	DECLARE_DELEGATE(FOnFailEvent);
 
 	FOnConnectedEvent OnConnectedEvent;
 	FOnDisconnectedEvent OnDisconnectedEvent;
