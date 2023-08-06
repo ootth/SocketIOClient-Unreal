@@ -208,7 +208,7 @@ namespace sio
         
         error_listener m_error_listener;
         
-        std::unique_ptr<asio::system_timer> m_connection_timer;
+        //std::unique_ptr<asio::system_timer> m_connection_timer;
         
         std::queue<packet> m_packet_queue;
         
@@ -300,10 +300,10 @@ namespace sio
         NULL_GUARD(m_client);
         packet p(packet::type_connect, m_nsp, m_auth);
         m_client->send(p);
-        m_connection_timer.reset(new asio::system_timer(m_client->get_io_service()));
-        lib::error_code ec;
-        m_connection_timer->expires_from_now(std::chrono::milliseconds(20000), ec);
-        m_connection_timer->async_wait(std::bind(&socket::impl::timeout_connection,this, std::placeholders::_1));
+        //m_connection_timer.reset(new asio::system_timer(m_client->get_io_service()));
+        //lib::error_code ec;
+        //m_connection_timer->expires_from_now(std::chrono::milliseconds(20000), ec);
+        //m_connection_timer->async_wait(std::bind(&socket::impl::timeout_connection,this, std::placeholders::_1));
     }
     
     void socket::impl::close()
@@ -314,23 +314,23 @@ namespace sio
             packet p(packet::type_disconnect, m_nsp);
             send_packet(p);
             
-            if(!m_connection_timer)
-            {
-                m_connection_timer.reset(new asio::system_timer(m_client->get_io_service()));
-            }
-            lib::error_code ec;
-            m_connection_timer->expires_from_now(std::chrono::milliseconds(3000), ec);
-            m_connection_timer->async_wait(std::bind(&socket::impl::on_close, this));
+            //if(!m_connection_timer)
+            //{
+            //    m_connection_timer.reset(new asio::system_timer(m_client->get_io_service()));
+            //}
+            //lib::error_code ec;
+            //m_connection_timer->expires_from_now(std::chrono::milliseconds(3000), ec);
+            //m_connection_timer->async_wait(std::bind(&socket::impl::on_close, this));
         }
     }
     
     void socket::impl::on_connected()
     {
-        if(m_connection_timer)
-        {
-            m_connection_timer->cancel();
-            m_connection_timer.reset();
-        }
+        //if(m_connection_timer)
+        //{
+        //    m_connection_timer->cancel();
+        //    m_connection_timer.reset();
+        //}
         if(!m_connected)
         {
             m_connected = true;
@@ -357,11 +357,11 @@ namespace sio
         sio::client_impl_base *client = m_client;
         m_client = NULL;
 
-        if(m_connection_timer)
-        {
-            m_connection_timer->cancel();
-            m_connection_timer.reset();
-        }
+        //if(m_connection_timer)
+        //{
+        //    m_connection_timer->cancel();
+        //    m_connection_timer.reset();
+        //}
         m_connected = false;
 		{
 			std::lock_guard<std::mutex> guard(m_packet_mutex);
@@ -519,7 +519,7 @@ namespace sio
         {
             return;
         }
-        m_connection_timer.reset();
+        //m_connection_timer.reset();
         LOG("Connection timeout,close socket."<<std::endl);
         //Should close socket if no connected message arrive.Otherwise we'll never ask for open again.
         this->on_close();
